@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>리얼 강치 벽돌깨기 & 서울 날씨</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background: #070a12;
+            color: #ffffff;
+            touch-action: manipulation;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .sewer-panel {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(34, 197, 94, 0.4);
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.25);
+        }
+        .weather-panel {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);
+        }
+        .btn-gangchi {
+            background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+            border: 2px solid #86efac;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+            transition: all 0.15s ease;
+        }
+        .btn-gangchi:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+        }
+        .btn-gangchi:active {
+            transform: translateY(1px);
+        }
+        .touch-btn {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1.5px solid rgba(134, 239, 172, 0.5);
+            touch-action: none;
+        }
+        .touch-btn:active {
+            background: rgba(34, 197, 94, 0.5);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-2 md:p-4 select-none">
+
+    <!-- Top Main Header -->
+    <header class="w-full max-w-4xl flex justify-between items-center sewer-panel p-3 px-6 rounded-2xl mb-3">
+        <!-- Title, Manual Temperature Input, and Ball Speed Badge side-by-side in a single row -->
+        <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+            <span class="text-3xl animate-bounce">🦭</span>
+            <h1 class="text-xl md:text-2xl text-emerald-400 tracking-wide drop-shadow-md whitespace-nowrap">하수구 강치 벽돌깨기</h1>
+            
+            <!-- Inline Temperature Input & Speed Indicator Badge -->
+            <div class="flex items-center space-x-2 bg-sky-950/90 border border-sky-400/50 px-3 py-1 rounded-full text-xs md:text-sm text-sky-200 shadow-inner">
+                <span class="text-base">☀️ 서울</span>
+                
+                <!-- Direct Temperature Input Field -->
+                <div class="flex items-center bg-slate-900 border border-sky-400/60 rounded-md px-1.5 py-0.5">
+                    <input type="number" id="temp-input" value="11" min="-30" max="50" class="w-12 bg-transparent text-center font-bold text-sky-300 focus:outline-none text-sm md:text-base">
+                    <span class="text-sky-300 font-bold">°C</span>
+                </div>
+
+                <span class="text-sky-400/60">|</span>
+                <span id="weather-text" class="text-sky-200 font-medium">맑음</span>
+                <span class="text-sky-400/60">|</span>
+                
+                <!-- Live Speed Indicator -->
+                <div class="flex items-center space-x-1 text-emerald-300 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                    <span>⚡ 속도:</span>
+                    <span id="speed-display">9.5</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button id="sound-btn" class="text-emerald-300 hover:text-white text-xl p-2 transition">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button id="pause-btn" class="text-emerald-300 hover:text-white text-xl p-2 transition">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <div class="w-full max-w-4xl flex flex-col items-center sewer-panel p-3 rounded-2xl">
+
+        <!-- Stats Bar -->
+        <div class="w-full flex justify-between items-center px-4 py-2 mb-2 bg-slate-950/80 rounded-xl border border-emerald-500/30 text-sm md:text-base">
+            <div class="flex items-center space-x-1 text-rose-400">
+                <span>❤️</span>
+                <span id="lives-display" class="text-lg text-white font-bold">3</span>
+            </div>
+            <div class="flex items-center space-x-1 text-cyan-300">
+                <span>🦭 강치 수</span>
+                <span id="balls-display" class="text-lg text-emerald-300 font-bold">1</span>
+            </div>
+            <div class="flex items-center space-x-1 text-amber-300">
+                <span>🏆 점수</span>
+                <span id="score-display" class="text-lg text-white font-bold">0</span>
+            </div>
+            <div class="flex items-center space-x-1 text-emerald-400">
+                <span>⭐</span>
+                <span id="level-display" class="text-lg text-white font-bold">STAGE 1</span>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full flex justify-center items-center">
+            <canvas id="gameCanvas" width="600" height="600" class="w-full max-w-[600px] h-auto rounded-xl border-2 border-emerald-500/40 bg-slate-950 shadow-2xl cursor-none"></canvas>
+
+            <!-- Start Overlay -->
+            <div id="start-screen" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center rounded-xl z-30 p-4 text-center">
+                <div class="text-6xl mb-2 animate-bounce">🦭🌊💥</div>
+                <h2 class="text-3xl md:text-4xl text-emerald-400 mb-1">독도 강치 벽돌깨기</h2>
+                <p class="text-sm text-emerald-200/80 mb-6">벽돌을 칠 때마다 강치가 2배로 폭발 분열합니다!</p>
+
+                <button id="start-btn" class="btn-gangchi text-white text-xl px-8 py-3.5 rounded-2xl mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-play"></i> 강치 발사 & 게임 시작!
+                </button>
+                <p class="text-xs text-gray-400">마우스 이동으로 패들을 조종하세요</p>
+            </div>
+
+            <!-- Pause Overlay -->
+            <div id="pause-screen" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center rounded-xl z-30">
+                <h2 class="text-3xl text-emerald-300 mb-6">일시 정지</h2>
+                <button id="resume-btn" class="btn-gangchi text-white text-lg px-8 py-3 rounded-xl mb-3 w-40">
+                    계속하기
+                </button>
+                <button id="restart-btn-pause" class="btn-gangchi text-white text-lg px-8 py-3 rounded-xl w-40">
+                    처음부터
+                </button>
+            </div>
+
+            <!-- Clear Overlay -->
+            <div id="clear-screen" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center rounded-xl z-30 p-4 text-center">
+                <div class="text-5xl mb-2">🎉🦭🌊</div>
+                <h2 class="text-3xl md:text-4xl text-emerald-300 mb-2">STAGE CLEAR!</h2>
+                <p class="text-emerald-100 text-sm mb-6">하수구 벽돌을 모두 깨끗하게 정화했습니다!</p>
+
+                <button id="next-stage-btn" class="btn-gangchi text-white text-xl px-8 py-3.5 rounded-2xl">
+                    다음 스테이지 <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="gameover-screen" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center rounded-xl z-30 p-4 text-center">
+                <div class="text-5xl mb-2">😭🦭</div>
+                <h2 class="text-3xl md:text-4xl text-rose-400 mb-2">GAME OVER</h2>
+                <div class="bg-slate-900/90 p-3.5 rounded-xl border border-rose-500/30 mb-6 text-center w-56">
+                    <div class="text-xs text-gray-400">최종 점수</div>
+                    <div id="final-score" class="text-2xl text-emerald-300 mb-1">0</div>
+                </div>
+                <button id="retry-btn" class="btn-gangchi text-white text-xl px-8 py-3.5 rounded-2xl">
+                    <i class="fa-solid fa-rotate-right"></i> 다시 도전
+                </button>
+            </div>
+        </div>
+
+        <!-- Touch Action Buttons (Mobile) -->
+        <div class="w-full mt-2 flex gap-2 md:hidden">
+            <button id="t-left" class="touch-btn flex-1 py-3 rounded-xl text-emerald-300 text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="t-launch" class="touch-btn flex-1 py-3 rounded-xl text-emerald-300 text-base flex items-center justify-center gap-1">
+                🚀 발사
+            </button>
+            <button id="t-right" class="touch-btn flex-1 py-3 rounded-xl text-emerald-300 text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Sound Manager using Web Audio API
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playBounce() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.05);
+                } catch(e){}
+            }
+
+            playGangchiBark() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(550, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(850, this.ctx.currentTime + 0.04);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.08);
+                } catch(e){}
+            }
+        }
+
+        const sound = new SoundManager();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const CANVAS_WIDTH = 600;
+        const CANVAS_HEIGHT = 600;
+
+        let gameState = 'START';
+        let score = 0;
+        let lives = 3;
+        let currentLevel = 1;
+
+        const paddle = {
+            x: CANVAS_WIDTH / 2 - 60,
+            y: CANVAS_HEIGHT - 35,
+            width: 120,
+            height: 16,
+            speed: 10,
+            dx: 0
+        };
+
+        class GangchiBall {
+            constructor(x, y, dx, dy, isAttached = false) {
+                this.x = x;
+                this.y = y;
+                this.radius = 15;
+                this.dx = dx;
+                this.dy = dy;
+                this.speed = currentBallSpeed;
+                this.isAttached = isAttached;
+                this.attachOffsetX = 0;
+                this.angle = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.15;
+            }
+
+            update() {
+                // Dynamically sync speed multiplier if changed during gameplay
+                const currentMag = Math.hypot(this.dx, this.dy);
+                if (currentMag > 0 && Math.abs(currentMag - currentBallSpeed) > 0.1 && !this.isAttached) {
+                    const ratio = currentBallSpeed / currentMag;
+                    this.dx *= ratio;
+                    this.dy *= ratio;
+                }
+
+                if (this.isAttached) {
+                    this.x = paddle.x + paddle.width / 2 + this.attachOffsetX;
+                    this.y = paddle.y - this.radius - 2;
+                    return;
+                }
+
+                this.x += this.dx;
+                this.y += this.dy;
+                this.angle += this.rotationSpeed;
+
+                if (this.x - this.radius <= 0) {
+                    this.x = this.radius;
+                    this.dx *= -1;
+                    sound.playBounce();
+                } else if (this.x + this.radius >= CANVAS_WIDTH) {
+                    this.x = CANVAS_WIDTH - this.radius;
+                    this.dx *= -1;
+                    sound.playBounce();
+                }
+
+                if (this.y - this.radius <= 0) {
+                    this.y = this.radius;
+                    this.dy *= -1;
+                    sound.playBounce();
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                const r = this.radius;
+
+                // 1. Realistic Flippers
+                [-1, 1].forEach(side => {
+                    ctx.save();
+                    ctx.scale(side, 1);
+                    ctx.beginPath();
+                    ctx.ellipse(r * 0.85, 2, r * 0.4, r * 0.2, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fillStyle = '#2d3748';
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                // 2. Realistic Wet Fur Body
+                const furGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r);
+                furGrad.addColorStop(0, '#718096');
+                furGrad.addColorStop(0.5, '#4a5568');
+                furGrad.addColorStop(1, '#1a202c');
+
+                ctx.beginPath();
+                ctx.arc(0, 0, r, 0, Math.PI * 2);
+                ctx.fillStyle = furGrad;
+                ctx.fill();
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // 3. Ear Pinnae
+                [-1, 1].forEach(side => {
+                    ctx.save();
+                    ctx.scale(side, 1);
+                    ctx.beginPath();
+                    ctx.ellipse(r * 0.75, -r * 0.45, r * 0.12, r * 0.25, -Math.PI * 0.15, 0, Math.PI * 2);
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                // 4. Muzzle / Snout
+                ctx.beginPath();
+                ctx.ellipse(0, r * 0.22, r * 0.5, r * 0.38, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#cbd5e1';
+                ctx.fill();
+
+                // 5. Nose
+                ctx.beginPath();
+                ctx.ellipse(0, r * 0.08, r * 0.18, r * 0.12, 0, 0, Math.PI * 2);
+                ctx.fillStyle = '#020617';
+                ctx.fill();
+
+                // 6. Eyes
+                [-1, 1].forEach(side => {
+                    const eyeX = side * r * 0.35;
+                    const eyeY = -r * 0.16;
+                    ctx.beginPath();
+                    ctx.arc(eyeX, eyeY, r * 0.15, 0, Math.PI * 2);
+                    ctx.fillStyle = '#020617';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(eyeX - 1.5, eyeY - 1.5, r * 0.05, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                });
+
+                // 7. Whiskers
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 1;
+                [-1, 1].forEach(side => {
+                    for (let i = -1; i <= 1; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(side * 4, r * 0.2 + i * 2);
+                        ctx.lineTo(side * (r * 1.1), r * 0.2 + i * 4);
+                        ctx.stroke();
+                    }
+                });
+
+                ctx.restore();
+            }
+        }
+
+        let balls = [];
+        let currentBallSpeed = 9.5;
+
+        // Dynamic Temperature Speed Calculation Formula
+        function calculateSpeedFromTemp(temp) {
+            // Base speed is 8.0 at 0°C, increasing linearly with temperature
+            const speed = 8.0 + (temp * 0.15);
+            return Math.max(4.0, Math.min(18.0, parseFloat(speed.toFixed(1))));
+        }
+
+        function updateTemperatureAndSpeed() {
+            const tempInput = document.getElementById('temp-input');
+            let tempVal = parseInt(tempInput.value);
+            if (isNaN(tempVal)) tempVal = 11;
+
+            currentBallSpeed = calculateSpeedFromTemp(tempVal);
+            document.getElementById('speed-display').innerText = currentBallSpeed;
+
+            // Dynamically adjust weather text depending on input temperature
+            const weatherText = document.getElementById('weather-text');
+            if (tempVal <= 0) weatherText.innerText = '❄️ 꽁꽁 강추위';
+            else if (tempVal < 18) weatherText.innerText = '☀️ 맑음·선선함';
+            else if (tempVal < 28) weatherText.innerText = '🌤️ 따뜻함';
+            else weatherText.innerText = '🔥 폭염·무더위';
+
+            // Apply immediately to existing active balls
+            balls.forEach(b => {
+                b.speed = currentBallSpeed;
+            });
+        }
+
+        document.getElementById('temp-input').addEventListener('input', updateTemperatureAndSpeed);
+        document.getElementById('temp-input').addEventListener('change', updateTemperatureAndSpeed);
+
+        // Initial setup
+        updateTemperatureAndSpeed();
+
+        // Dense Brick Grid Setup
+        const BRICK_ROWS = 7;
+        const BRICK_COLS = 12;
+        const BRICK_PADDING = 4;
+        const BRICK_OFFSET_TOP = 40;
+        const BRICK_OFFSET_LEFT = 15;
+        const BRICK_WIDTH = (CANVAS_WIDTH - (BRICK_OFFSET_LEFT * 2) - (BRICK_PADDING * (BRICK_COLS - 1))) / BRICK_COLS;
+        const BRICK_HEIGHT = 20;
+
+        class Brick {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.hits = type === 2 ? 3 : (type === 3 ? 2 : 1);
+                this.isAlive = true;
+            }
+
+            draw() {
+                if (!this.isAlive) return;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, BRICK_WIDTH, BRICK_HEIGHT, 4);
+
+                if (this.type === 1) ctx.fillStyle = '#22c55e';      // Normal Green
+                else if (this.type === 2) ctx.fillStyle = '#a855f7'; // Heavy Purple (3 hits)
+                else if (this.type === 3) ctx.fillStyle = '#06b6d4'; // Medium Cyan (2 hits)
+                else if (this.type === 4) ctx.fillStyle = '#ef4444'; // Explosive Red
+
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        let bricks = [];
+
+        function createLevel() {
+            bricks = [];
+            for (let r = 0; r < BRICK_ROWS; r++) {
+                for (let c = 0; c < BRICK_COLS; c++) {
+                    const bx = BRICK_OFFSET_LEFT + c * (BRICK_WIDTH + BRICK_PADDING);
+                    const by = BRICK_OFFSET_TOP + r * (BRICK_HEIGHT + BRICK_PADDING);
+
+                    let type = 1;
+                    if (r === 0) type = 2;
+                    else if (r === 1 || r === 2) type = 3;
+                    else if (Math.random() < 0.1) type = 4;
+
+                    bricks.push(new Brick(bx, by, type));
+                }
+            }
+        }
+
+        function launchBalls() {
+            balls.forEach(b => {
+                if (b.isAttached) {
+                    b.isAttached = false;
+                    b.dy = -b.speed;
+                    b.dx = (Math.random() - 0.5) * 8;
+                }
+            });
+        }
+
+        function duplicateGangchiBall(hitBall) {
+            if (balls.length >= 100) return;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = currentBallSpeed;
+            const newDx = Math.cos(angle) * speed;
+            const newDy = -Math.abs(Math.sin(angle) * speed);
+
+            balls.push(new GangchiBall(hitBall.x, hitBall.y, newDx, newDy));
+            sound.playGangchiBark();
+        }
+
+        function checkCollisions() {
+            balls.forEach(ball => {
+                if (ball.isAttached) return;
+
+                // Paddle Collision
+                if (ball.y + ball.radius >= paddle.y &&
+                    ball.y - ball.radius <= paddle.y + paddle.height &&
+                    ball.x + ball.radius >= paddle.x &&
+                    ball.x - ball.radius <= paddle.x + paddle.width &&
+                    ball.dy > 0) {
+                    
+                    const hitPoint = (ball.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+                    ball.dx = hitPoint * 8;
+                    ball.dy = -Math.abs(ball.dy);
+                    sound.playBounce();
+                }
+
+                // Brick Collision
+                bricks.forEach(b => {
+                    if (!b.isAlive) return;
+
+                    if (ball.x + ball.radius > b.x &&
+                        ball.x - ball.radius < b.x + BRICK_WIDTH &&
+                        ball.y + ball.radius > b.y &&
+                        ball.y - ball.radius < b.y + BRICK_HEIGHT) {
+                        
+                        ball.dy *= -1;
+                        b.hits--;
+
+                        if (b.hits <= 0) {
+                            b.isAlive = false;
+                            score += 10;
+                            duplicateGangchiBall(ball);
+                        }
+                        updateUI();
+                    }
+                });
+            });
+
+            // Remove fallen balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                if (balls[i].y - balls[i].radius > CANVAS_HEIGHT) {
+                    balls.splice(i, 1);
+                }
+            }
+
+            updateUI();
+
+            if (balls.length === 0 && gameState === 'PLAYING') {
+                lives--;
+                updateUI();
+
+                if (lives <= 0) {
+                    gameState = 'GAMEOVER';
+                    document.getElementById('final-score').innerText = score;
+                    document.getElementById('gameover-screen').classList.remove('hidden');
+                } else {
+                    balls.push(new GangchiBall(paddle.x + paddle.width / 2, paddle.y - 18, 0, 0, true));
+                }
+            }
+
+            const remaining = bricks.filter(b => b.isAlive).length;
+            if (remaining === 0 && gameState === 'PLAYING') {
+                gameState = 'CLEAR';
+                document.getElementById('clear-screen').classList.remove('hidden');
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('lives-display').innerText = lives;
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('balls-display').innerText = balls.length;
+            document.getElementById('level-display').innerText = `STAGE ${currentLevel}`;
+        }
+
+        function resetGame(fullReset = true) {
+            if (fullReset) {
+                score = 0;
+                lives = 3;
+                currentLevel = 1;
+            }
+
+            paddle.x = CANVAS_WIDTH / 2 - paddle.width / 2;
+            balls = [new GangchiBall(paddle.x + paddle.width / 2, paddle.y - 18, 0, 0, true)];
+
+            createLevel();
+            updateUI();
+        }
+
+        function drawPaddle() {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(paddle.x, paddle.y, paddle.width, paddle.height, 8);
+            ctx.fillStyle = '#15803d';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#86efac';
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+
+            paddle.x += paddle.dx;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, paddle.x));
+
+            balls.forEach(b => b.update());
+            checkCollisions();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Background grid
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < CANVAS_WIDTH; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
+            }
+            for (let y = 0; y < CANVAS_HEIGHT; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_WIDTH, y); ctx.stroke();
+            }
+
+            bricks.forEach(b => b.draw());
+            drawPaddle();
+            balls.forEach(b => b.draw());
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            sound.init();
+            if (gameState !== 'PLAYING') return;
+
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                paddle.dx = -paddle.speed;
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                paddle.dx = paddle.speed;
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                launchBalls();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (['ArrowLeft', 'a', 'A', 'ArrowRight', 'd', 'D'].includes(e.key)) {
+                paddle.dx = 0;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'PLAYING') return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            paddle.x = mouseX - paddle.width / 2;
+            paddle.x = Math.max(0, Math.min(CANVAS_WIDTH - paddle.width, paddle.x));
+        });
+
+        canvas.addEventListener('click', () => {
+            sound.init();
+            if (gameState === 'PLAYING') launchBalls();
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            sound.init();
+            document.getElementById('start-screen').classList.add('hidden');
+            resetGame(true);
+            gameState = 'PLAYING';
+        });
+
+        document.getElementById('retry-btn').addEventListener('click', () => {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            resetGame(true);
+            gameState = 'PLAYING';
+        });
+
+        document.getElementById('next-stage-btn').addEventListener('click', () => {
+            document.getElementById('clear-screen').classList.add('hidden');
+            currentLevel++;
+            resetGame(false);
+            gameState = 'PLAYING';
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
