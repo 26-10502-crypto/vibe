@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Bright Garden Rhythm Escape - 햇살 정원 3D 리듬 탈출</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Jua', 'Outfit', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid rgba(74, 222, 128, 0.4);
+        }
+
+        .glow-btn {
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.35);
+            transition: all 0.15s ease;
+        }
+
+        .glow-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .dpad-btn {
+            transition: background-color 0.1s ease, transform 0.1s ease;
+        }
+
+        .dpad-btn:active, .dpad-btn.active {
+            background-color: rgba(74, 222, 128, 0.9) !important;
+            color: #ffffff !important;
+            transform: scale(0.92);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-sky-300 via-emerald-100 to-green-200 text-slate-800 min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-hidden">
+
+    <!-- Header -->
+    <header class="w-full max-w-md text-center mt-1 mb-1">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-900 flex items-center justify-center gap-2 drop-shadow-sm">
+            ☀️ 3D 정원 리듬 탈출 🐰💨
+        </h1>
+        <p class="text-xs text-emerald-800 font-semibold">박자에 맞춰 이동하고 JUMP로 장애물을 넘으세요! 🐺⚡</p>
+    </header>
+
+    <!-- Main Game View -->
+    <main class="w-full max-w-md flex flex-col items-center gap-2">
+
+        <!-- Controls & Difficulty Bar -->
+        <div class="w-full glass-panel rounded-2xl p-2 flex items-center justify-between gap-2 shadow-lg">
+            <div class="flex items-center gap-2">
+                <select id="diffSelect" onchange="changeDifficulty()" class="bg-emerald-600 text-white text-xs font-bold rounded-xl px-2.5 py-1.5 border border-emerald-500 outline-none cursor-pointer shadow-sm">
+                    <option value="easy">🌸 빠른 (100 BPM)</option>
+                    <option value="normal" selected>🌷 신나는 (120 BPM)</option>
+                    <option value="hard">🔥 초고속 (140 BPM)</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div id="timePhaseBadge" class="px-2 py-1 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold flex items-center gap-1 shadow-sm">
+                    ☀️ <span>낮</span>
+                </div>
+                <button id="bgmBtn" onclick="toggleBGM()" class="px-2 py-1.5 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-800 text-xs font-bold flex items-center gap-1 hover:bg-emerald-200 shadow-sm">
+                    <i class="fa-solid fa-music text-emerald-600"></i>
+                </button>
+                <button id="soundBtn" onclick="toggleMute()" class="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-400 text-emerald-800 flex items-center justify-center text-xs shadow-sm">
+                    <i class="fa-solid fa-volume-high text-emerald-600"></i>
+                </button>
+                <button id="resetBtn" onclick="initGame()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-xs shadow-md glow-btn flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> <span>재시작</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- HUD Score / Stats Bar -->
+        <div class="w-full grid grid-cols-4 gap-1.5 text-center">
+            <div class="glass-panel rounded-xl py-1.5 px-1 flex flex-col items-center shadow-md">
+                <span class="text-[10px] text-emerald-700 font-bold uppercase">점수</span>
+                <span id="scoreDisplay" class="text-base font-extrabold font-mono text-emerald-900">0</span>
+            </div>
+            <div class="glass-panel rounded-xl py-1.5 px-1 flex flex-col items-center shadow-md">
+                <span class="text-[10px] text-teal-700 font-bold uppercase">도망친 거리</span>
+                <span id="distDisplay" class="text-base font-extrabold font-mono text-teal-800">0m</span>
+            </div>
+            <div class="glass-panel rounded-xl py-1.5 px-1 flex flex-col items-center shadow-md">
+                <span class="text-[10px] text-rose-700 font-bold uppercase">늑대 거리</span>
+                <span id="wolfDistDisplay" class="text-base font-extrabold font-mono text-rose-600">0m</span>
+            </div>
+            <div class="glass-panel rounded-xl py-1.5 px-1 flex flex-col items-center shadow-md">
+                <span class="text-[10px] text-amber-700 font-bold uppercase">콤보</span>
+                <span id="comboDisplay" class="text-base font-extrabold font-mono text-amber-600">0</span>
+            </div>
+        </div>
+
+        <!-- 3D WebGL Canvas Viewport -->
+        <div id="viewportContainer" class="relative w-full aspect-[4/5] max-w-[420px] glass-panel rounded-2xl p-1.5 flex items-center justify-center shadow-xl border-2 border-emerald-400 overflow-hidden bg-sky-200">
+            <div id="webglContainer" class="w-full h-full rounded-xl overflow-hidden"></div>
+
+            <!-- Dynamic Floating Judgment Popup -->
+            <div id="judgmentPopup" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none opacity-0 transition-all duration-150 transform scale-75 z-20">
+                <div id="judgmentText" class="text-3xl font-black tracking-widest drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">PERFECT</div>
+            </div>
+        </div>
+
+        <!-- Beat Bar Visualizer -->
+        <div class="w-full max-w-[360px] glass-panel rounded-2xl p-2 flex flex-col gap-1 border-2 border-emerald-400 shadow-md">
+            <div class="flex justify-between items-center text-xs text-emerald-800 font-bold px-1">
+                <span>🎵 박자 타겟</span>
+                <span id="bpmDisplay" class="font-mono text-emerald-900 font-extrabold">120 BPM</span>
+            </div>
+            <div id="rhythmBarBox" class="relative w-full h-8 bg-emerald-950 rounded-xl overflow-hidden border-2 border-emerald-600 flex items-center shadow-inner">
+                <div class="absolute left-1/2 top-0 bottom-0 w-12 -translate-x-1/2 bg-amber-400/30 border-x-2 border-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(251,191,36,0.8)]">
+                    <div class="w-2 h-full bg-amber-300 shadow-[0_0_10px_#fde047]"></div>
+                </div>
+                <canvas id="rhythmBarCanvas" class="w-full h-full absolute inset-0"></canvas>
+            </div>
+        </div>
+
+        <!-- Touch Controls -->
+        <div class="w-full max-w-[360px] grid grid-cols-3 gap-2 justify-items-center items-center mt-1">
+            <button onmousedown="handleMove('Left')" ontouchstart="handleMove('Left')" id="btnLeft" class="dpad-btn w-full h-12 bg-emerald-600 border-2 border-emerald-400 rounded-xl flex items-center justify-center text-white text-lg shadow-md font-extrabold gap-1">
+                <i class="fa-solid fa-arrow-left"></i> <span>좌</span>
+            </button>
+            <button onmousedown="handleJump()" ontouchstart="handleJump()" id="btnJump" class="dpad-btn w-full h-12 bg-amber-500 border-2 border-amber-300 rounded-xl flex items-center justify-center text-white text-base shadow-md font-black gap-1 col-span-1">
+                <i class="fa-solid fa-bolt"></i> <span>JUMP</span>
+            </button>
+            <button onmousedown="handleMove('Right')" ontouchstart="handleMove('Right')" id="btnRight" class="dpad-btn w-full h-12 bg-emerald-600 border-2 border-emerald-400 rounded-xl flex items-center justify-center text-white text-lg shadow-md font-extrabold gap-1">
+                <span>우</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-[11px] text-emerald-800 font-bold text-center my-1">
+        <kbd class="px-1.5 py-0.5 bg-emerald-700 text-white rounded font-mono">A/D</kbd> / <kbd class="px-1.5 py-0.5 bg-emerald-700 text-white rounded font-mono">← →</kbd> 좌우 이동 | <kbd class="px-1.5 py-0.5 bg-amber-600 text-white rounded font-mono">Space/W/↑</kbd> 점프!
+    </footer>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-panel bg-white/95 border-2 border-emerald-500 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <div id="resIcon" class="w-16 h-16 bg-rose-100 border-2 border-rose-400 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-600 text-3xl animate-bounce shadow-md">
+                🐺
+            </div>
+            
+            <h2 id="resTitle" class="text-2xl font-black text-slate-800 mb-1">게임 오버!</h2>
+            <p id="resSub" class="text-xs text-rose-600 font-bold mb-4">늑대에게 결국 붙잡히고 말았습니다!</p>
+
+            <div class="bg-emerald-50/80 rounded-2xl p-4 mb-5 border border-emerald-300 grid grid-cols-2 gap-3 text-left shadow-inner">
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-700 font-bold block">최종 점수</span>
+                    <span id="resScore" class="text-base font-extrabold text-amber-600 font-mono">0</span>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-700 font-bold block">도망친 거리</span>
+                    <span id="resDist" class="text-base font-extrabold text-teal-700 font-mono">0m</span>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-700 font-bold block">최대 콤보</span>
+                    <span id="resMaxCombo" class="text-base font-extrabold text-emerald-700 font-mono">0</span>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-700 font-bold block">당근 수집</span>
+                    <span id="resCarrots" class="text-base font-extrabold text-orange-600 font-mono">0개</span>
+                </div>
+            </div>
+
+            <button onclick="closeModalAndRestart()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-base shadow-lg glow-btn transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> 다시 도전하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Web Audio & Game Engine Scripts -->
+    <script>
+        class GardenRhythmAudio {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.bgmEnabled = true;
+                this.beatStep = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playRhythmTrack(bpm) {
+                if (this.muted) return;
+                this.init();
+
+                const step = this.beatStep % 4;
+                this.beatStep++;
+
+                // Kick
+                if (step === 0 || step === 2) {
+                    const kick = this.ctx.createOscillator();
+                    const kickGain = this.ctx.createGain();
+                    kick.type = 'sine';
+                    kick.frequency.setValueAtTime(180, this.ctx.currentTime);
+                    kick.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.12);
+                    kickGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                    kickGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                    kick.connect(kickGain);
+                    kickGain.connect(this.ctx.destination);
+                    kick.start();
+                    kick.stop(this.ctx.currentTime + 0.12);
+                }
+
+                // Snare
+                if (step === 1 || step === 3) {
+                    const snare = this.ctx.createOscillator();
+                    const snareGain = this.ctx.createGain();
+                    snare.type = 'triangle';
+                    snare.frequency.setValueAtTime(280, this.ctx.currentTime);
+                    snare.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.08);
+                    snareGain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    snareGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+                    snare.connect(snareGain);
+                    snareGain.connect(this.ctx.destination);
+                    snare.start();
+                    snare.stop(this.ctx.currentTime + 0.08);
+                }
+
+                // Hi-Hat
+                const hat = this.ctx.createOscillator();
+                const hatGain = this.ctx.createGain();
+                hat.type = 'square';
+                hat.frequency.setValueAtTime(1600, this.ctx.currentTime);
+                hatGain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+                hatGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+                hat.connect(hatGain);
+                hatGain.connect(this.ctx.destination);
+                hat.start();
+                hat.stop(this.ctx.currentTime + 0.03);
+
+                // Upbeat Garden Synth Chords
+                if (this.bgmEnabled) {
+                    const chords = [
+                        [261.63, 329.63, 392.00, 523.25],
+                        [349.23, 440.00, 523.25, 698.46],
+                        [392.00, 493.88, 587.33, 783.99],
+                        [220.00, 261.63, 329.63, 440.00]
+                    ];
+                    const chord = chords[step];
+                    chord.forEach(freq => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.22);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(this.ctx.currentTime + 0.22);
+                    });
+                }
+            }
+
+            playStepSound(type) {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                if (type === 'PERFECT') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, this.ctx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                } else if (type === 'GREAT') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                } else if (type === 'JUMP') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                } else {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(80, this.ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                }
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playWolfStep() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.18);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.18);
+            }
+
+            playItemPickup() {
+                if (this.muted) return;
+                this.init();
+                const notes = [659.25, 880, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.04);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.04 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.04);
+                    osc.stop(this.ctx.currentTime + idx * 0.04 + 0.12);
+                });
+            }
+
+            playGameOver() {
+                if (this.muted) return;
+                this.init();
+                const notes = [220, 196, 174, 146];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + idx * 0.12 + 0.25);
+                });
+            }
+        }
+
+        const audio = new GardenRhythmAudio();
+
+        function toggleMute() {
+            audio.muted = !audio.muted;
+            document.getElementById('soundBtn').innerHTML = audio.muted 
+                ? '<i class="fa-solid fa-volume-xmark text-rose-500"></i>' 
+                : '<i class="fa-solid fa-volume-high text-emerald-600"></i>';
+        }
+
+        function toggleBGM() {
+            audio.bgmEnabled = !audio.bgmEnabled;
+        }
+
+        // Map & Game Constants
+        const LANES = 7;
+        const CELL_SIZE = 2;
+        const DIFFICULTY_SETTINGS = {
+            easy: { bpm: 100, perfectWin: 140, greatWin: 250, wolfInterval: 3 },
+            normal: { bpm: 120, perfectWin: 120, greatWin: 210, wolfInterval: 2 },
+            hard: { bpm: 140, perfectWin: 90, greatWin: 170, wolfInterval: 2 }
+        };
+
+        let currentDiff = 'normal';
+        let bpm = 120;
+        let beatIntervalMs = 60000 / 120;
+
+        // Player & Wolf State
+        let player = { lane: 3, row: 10, isJumping: false, jumpY: 0, vY: 0 };
+        let wolfRow = 0;
+        let maxRowReached = 10;
+
+        let mapObjects = {}; 
+        let wildBoars = []; 
+        let hawks = [];     
+        let rollingLogs = [];
+        let particles = [];
+
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let collectedCarrots = 0;
+        let totalBeatsCount = 0;
+        let isGameOver = false;
+
+        let gameStartTime = performance.now();
+        let lastBeatTime = performance.now();
+        let beats = [];
+
+        // Three.js Global Variables
+        let scene, camera, renderer, sunLight, ambientLight;
+        let rabbitMesh, wolfMesh, beatRingMesh, trackMesh;
+        let mapMeshes = {};
+
+        const rhythmCanvas = document.getElementById('rhythmBarCanvas');
+        const rhythmCtx = rhythmCanvas.getContext('2d');
+
+        function changeDifficulty() {
+            currentDiff = document.getElementById('diffSelect').value;
+            initGame();
+        }
+
+        // --- 3D Model Builders ---
+        function createRabbitMesh() {
+            const group = new THREE.Group();
+            
+            const bodyGeo = new THREE.SphereGeometry(0.6, 16, 16);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.6;
+            group.add(body);
+
+            const headGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const head = new THREE.Mesh(headGeo, bodyMat);
+            head.position.set(0, 1.1, 0.2);
+            group.add(head);
+
+            const earGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.6, 8);
+            const earMat = new THREE.MeshLambertMaterial({ color: 0xffb6c1 });
+            const earL = new THREE.Mesh(earGeo, earMat);
+            earL.position.set(-0.18, 1.6, 0.1);
+            earL.rotation.z = -0.15;
+            const earR = new THREE.Mesh(earGeo, earMat);
+            earR.position.set(0.18, 1.6, 0.1);
+            earR.rotation.z = 0.15;
+            group.add(earL);
+            group.add(earR);
+
+            return group;
+        }
+
+        function createWolfMesh() {
+            const group = new THREE.Group();
+
+            const bodyGeo = new THREE.BoxGeometry(1.2, 0.8, 1.6);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.6;
+            group.add(body);
+
+            const headGeo = new THREE.ConeGeometry(0.5, 0.9, 8);
+            const headMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.rotation.x = Math.PI / 2;
+            head.position.set(0, 0.9, 0.8);
+            group.add(head);
+
+            const eyeGeo = new THREE.SphereGeometry(0.1, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.2, 1.0, 1.1);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(0.2, 1.0, 1.1);
+            group.add(eyeL);
+            group.add(eyeR);
+
+            return group;
+        }
+
+        function createTreeMesh() {
+            const group = new THREE.Group();
+            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 8);
+            const trunkMat = new THREE.MeshLambertMaterial({ color: 0x8b5a2b });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 0.4;
+            group.add(trunk);
+
+            const leavesGeo = new THREE.ConeGeometry(0.8, 1.4, 8);
+            const leavesMat = new THREE.MeshLambertMaterial({ color: 0x15803d });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.y = 1.3;
+            group.add(leaves);
+            return group;
+        }
+
+        function createThornMesh() {
+            const group = new THREE.Group();
+            const thornGeo = new THREE.ConeGeometry(0.3, 0.8, 6);
+            const thornMat = new THREE.MeshLambertMaterial({ color: 0xb91c1c });
+            for (let i = 0; i < 3; i++) {
+                const t = new THREE.Mesh(thornGeo, thornMat);
+                t.position.set((i - 1) * 0.3, 0.4, 0);
+                group.add(t);
+            }
+            return group;
+        }
+
+        function createCarrotMesh() {
+            const group = new THREE.Group();
+            const carrotGeo = new THREE.ConeGeometry(0.25, 0.8, 8);
+            const carrotMat = new THREE.MeshLambertMaterial({ color: 0xf97316 });
+            const carrot = new THREE.Mesh(carrotGeo, carrotMat);
+            carrot.rotation.x = Math.PI;
+            carrot.position.y = 0.5;
+            group.add(carrot);
+
+            const leafGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const leafMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+            const leaf = new THREE.Mesh(leafGeo, leafMat);
+            leaf.position.y = 0.9;
+            group.add(leaf);
+            return group;
+        }
+
+        function createRiverTileMesh() {
+            const geo = new THREE.BoxGeometry(CELL_SIZE, 0.1, CELL_SIZE);
+            const mat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.y = 0.05;
+            return mesh;
+        }
+
+        function createRollingLogMesh() {
+            const group = new THREE.Group();
+            const logGeo = new THREE.CylinderGeometry(0.35, 0.35, CELL_SIZE * 0.9, 8);
+            const logMat = new THREE.MeshLambertMaterial({ color: 0x78350f });
+            const log = new THREE.Mesh(logGeo, logMat);
+            log.rotation.z = Math.PI / 2;
+            log.position.y = 0.35;
+            group.add(log);
+            return group;
+        }
+
+        function createWildBoarMesh() {
+            const group = new THREE.Group();
+            const bodyGeo = new THREE.BoxGeometry(0.9, 0.6, 1.2);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x92400e });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.4;
+            group.add(body);
+
+            const tuskGeo = new THREE.ConeGeometry(0.08, 0.3, 6);
+            const tuskMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const t1 = new THREE.Mesh(tuskGeo, tuskMat);
+            t1.position.set(-0.25, 0.3, 0.6);
+            t1.rotation.x = -Math.PI / 4;
+            const t2 = new THREE.Mesh(tuskGeo, tuskMat);
+            t2.position.set(0.25, 0.3, 0.6);
+            t2.rotation.x = -Math.PI / 4;
+            group.add(t1);
+            group.add(t2);
+            return group;
+        }
+
+        function createHawkMesh() {
+            const group = new THREE.Group();
+            const bodyGeo = new THREE.ConeGeometry(0.3, 1.0, 6);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.rotation.x = Math.PI / 2;
+            body.position.y = 2.4;
+            group.add(body);
+
+            const wingGeo = new THREE.BoxGeometry(1.8, 0.05, 0.4);
+            const wing = new THREE.Mesh(wingGeo, bodyMat);
+            wing.position.set(0, 2.4, 0);
+            group.add(wing);
+            return group;
+        }
+
+        function laneRowTo3D(lane, row) {
+            const x = (lane - (LANES - 1) / 2) * CELL_SIZE;
+            const z = -row * CELL_SIZE;
+            return { x, z };
+        }
+
+        function spawnDustParticles(pos) {
+            for (let i = 0; i < 6; i++) {
+                const geo = new THREE.SphereGeometry(0.08 + Math.random() * 0.06, 6, 6);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xd97706, transparent: true, opacity: 0.8 });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.set(pos.x + (Math.random() - 0.5) * 0.4, 0.1, pos.z + (Math.random() - 0.5) * 0.4);
+                p.vX = (Math.random() - 0.5) * 0.08;
+                p.vY = 0.08 + Math.random() * 0.06;
+                p.vZ = (Math.random() - 0.5) * 0.08;
+                p.life = 1.0;
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        // --- Three.js Scene Setup ---
+        function setup3DScene() {
+            const container = document.getElementById('webglContainer');
+            container.innerHTML = '';
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbae6fd);
+            scene.fog = new THREE.FogExp2(0xbae6fd, 0.025);
+
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(ambientLight);
+
+            sunLight = new THREE.DirectionalLight(0xfffbeb, 0.85);
+            sunLight.position.set(10, 25, 10);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            const ringGeo = new THREE.RingGeometry(0.7, 0.85, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            beatRingMesh = new THREE.Mesh(ringGeo, ringMat);
+            beatRingMesh.rotation.x = Math.PI / 2;
+            beatRingMesh.position.y = 0.05;
+            scene.add(beatRingMesh);
+
+            rabbitMesh = createRabbitMesh();
+            scene.add(rabbitMesh);
+
+            wolfMesh = createWolfMesh();
+            scene.add(wolfMesh);
+
+            const trackGeo = new THREE.PlaneGeometry(LANES * CELL_SIZE, 400);
+            const trackMat = new THREE.MeshLambertMaterial({ color: 0x86efac });
+            trackMesh = new THREE.Mesh(trackGeo, trackMat);
+            trackMesh.rotation.x = -Math.PI / 2;
+            trackMesh.position.set(0, 0, -200);
+            scene.add(trackMesh);
+        }
+
+        function generateMapChunk(startRow, count) {
+            for (let r = startRow; r < startRow + count; r++) {
+                if (r < 15) continue;
+
+                if (r % 12 === 0) {
+                    const safeLane = Math.floor(Math.random() * LANES);
+                    for (let l = 0; l < LANES; l++) {
+                        if (l !== safeLane) {
+                            mapObjects[`${l},${r}`] = { type: 'river' };
+                            const mesh = createRiverTileMesh();
+                            const pos = laneRowTo3D(l, r);
+                            mesh.position.set(pos.x, 0, pos.z);
+                            scene.add(mesh);
+                            mapMeshes[`${l},${r}`] = mesh;
+                        }
+                    }
+                    continue;
+                }
+
+                const rand = Math.random();
+                let type = null;
+                if (rand < 0.15) type = 'tree';
+                else if (rand < 0.26) type = 'thorn';
+                else if (rand < 0.38) type = 'carrot';
+
+                if (type) {
+                    const lane = Math.floor(Math.random() * LANES);
+                    mapObjects[`${lane},${r}`] = { type };
+
+                    let mesh;
+                    if (type === 'tree') mesh = createTreeMesh();
+                    if (type === 'thorn') mesh = createThornMesh();
+                    if (type === 'carrot') mesh = createCarrotMesh();
+
+                    const pos = laneRowTo3D(lane, r);
+                    mesh.position.set(pos.x, 0, pos.z);
+                    scene.add(mesh);
+                    mapMeshes[`${lane},${r}`] = mesh;
+                }
+
+                if (r % 8 === 0 && Math.random() < 0.7) {
+                    const dir = Math.random() < 0.5 ? 1 : -1;
+                    const startLane = dir === 1 ? 0 : LANES - 1;
+                    const logMesh = createRollingLogMesh();
+                    scene.add(logMesh);
+                    rollingLogs.push({ lane: startLane, row: r, dir, mesh: logMesh });
+                }
+
+                if (r % 7 === 0 && Math.random() < 0.7) {
+                    const dir = Math.random() < 0.5 ? 1 : -1;
+                    const startLane = dir === 1 ? 0 : LANES - 1;
+                    const boarMesh = createWildBoarMesh();
+                    scene.add(boarMesh);
+                    wildBoars.push({ lane: startLane, row: r, dir, mesh: boarMesh });
+                }
+
+                if (r % 10 === 0 && Math.random() < 0.6) {
+                    const hawkLane = Math.floor(Math.random() * LANES);
+                    const hawkMesh = createHawkMesh();
+                    scene.add(hawkMesh);
+                    hawks.push({ lane: hawkLane, row: r, mesh: hawkMesh });
+                }
+            }
+        }
+
+        function initGame() {
+            const settings = DIFFICULTY_SETTINGS[currentDiff];
+            bpm = settings.bpm;
+            beatIntervalMs = 60000 / bpm;
+            document.getElementById('bpmDisplay').innerText = `${bpm} BPM`;
+
+            player = { lane: 3, row: 10, isJumping: false, jumpY: 0, vY: 0 };
+            wolfRow = 0;
+            maxRowReached = 10;
+
+            Object.values(mapMeshes).forEach(m => scene && scene.remove(m));
+            wildBoars.forEach(b => scene && scene.remove(b.mesh));
+            rollingLogs.forEach(l => scene && scene.remove(l.mesh));
+            hawks.forEach(h => scene && scene.remove(h.mesh));
+            particles.forEach(p => scene && scene.remove(p));
+
+            mapObjects = {};
+            mapMeshes = {};
+            wildBoars = [];
+            rollingLogs = [];
+            hawks = [];
+            particles = [];
+
+            setup3DScene();
+            generateMapChunk(0, 100);
+
+            score = 0;
+            combo = 0;
+            maxCombo = 0;
+            collectedCarrots = 0;
+            totalBeatsCount = 0;
+            isGameOver = false;
+            beats = [];
+            gameStartTime = performance.now();
+
+            updateHUD();
+            resizeCanvas();
+            audio.init();
+        }
+
+        function resizeCanvas() {
+            const container = document.getElementById('webglContainer');
+            if (renderer && camera && container) {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+
+            const rRect = rhythmCanvas.getBoundingClientRect();
+            rhythmCanvas.width = rRect.width;
+            rhythmCanvas.height = rRect.height;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function handleJump() {
+            if (isGameOver) return;
+            audio.init();
+
+            if (!player.isJumping) {
+                player.isJumping = true;
+                player.vY = 0.35;
+                audio.playStepSound('JUMP');
+
+                const pPos = laneRowTo3D(player.lane, player.row);
+                spawnDustParticles(pPos);
+
+                // Auto-advance player forward row on jump
+                player.row++;
+                if (player.row > maxRowReached) {
+                    maxRowReached = player.row;
+                    if (maxRowReached + 50 > Object.keys(mapObjects).length / 2) {
+                        generateMapChunk(maxRowReached + 30, 50);
+                    }
+                }
+                score += 150;
+                showJudgment('JUMP! ✈️');
+                updateHUD();
+            }
+        }
+
+        function handleMove(direction) {
+            if (isGameOver) return;
+            audio.init();
+
+            const now = performance.now();
+            const timeSinceLastBeat = (now - lastBeatTime) % beatIntervalMs;
+            const diffToNearestBeat = Math.min(timeSinceLastBeat, beatIntervalMs - timeSinceLastBeat);
+
+            const settings = DIFFICULTY_SETTINGS[currentDiff];
+            let judgment = '';
+
+            if (diffToNearestBeat <= settings.perfectWin) {
+                judgment = 'PERFECT';
+            } else if (diffToNearestBeat <= settings.greatWin) {
+                judgment = 'GREAT';
+            } else {
+                judgment = 'MISS';
+            }
+
+            const dirBtn = document.getElementById(`btn${direction}`);
+            if (dirBtn) {
+                dirBtn.classList.add('active');
+                setTimeout(() => dirBtn.classList.remove('active'), 120);
+            }
+
+            if (judgment === 'MISS') {
+                combo = 0;
+                showJudgment('MISS! 🐺추격');
+                audio.playStepSound('MISS');
+                triggerWolfPenaltyStep();
+                updateHUD();
+                return;
+            }
+
+            let nextLane = player.lane;
+            let nextRow = player.row + 1;
+
+            if (direction === 'Left') nextLane = Math.max(0, player.lane - 1);
+            if (direction === 'Right') nextLane = Math.min(LANES - 1, player.lane + 1);
+
+            const targetObj = mapObjects[`${nextLane},${nextRow}`];
+
+            if (targetObj && targetObj.type === 'tree') {
+                combo = 0;
+                showJudgment('나무 충돌! 🐺추격');
+                audio.playStepSound('MISS');
+                triggerWolfPenaltyStep();
+                updateHUD();
+                return;
+            }
+
+            if (targetObj && targetObj.type === 'river' && !player.isJumping) {
+                combo = 0;
+                showJudgment('강물 침수! 🐺추격');
+                audio.playStepSound('MISS');
+                triggerWolfPenaltyStep();
+                return;
+            }
+
+            player.lane = nextLane;
+            player.row = nextRow;
+
+            const pPos = laneRowTo3D(player.lane, player.row);
+            spawnDustParticles(pPos);
+
+            if (player.row > maxRowReached) {
+                maxRowReached = player.row;
+                if (maxRowReached + 50 > Object.keys(mapObjects).length / 2) {
+                    generateMapChunk(maxRowReached + 30, 50);
+                }
+            }
+
+            if (targetObj) {
+                if (targetObj.type === 'thorn' && !player.isJumping) {
+                    combo = 0;
+                    showJudgment('가시 피격! 🐺추격');
+                    audio.playStepSound('MISS');
+                    triggerWolfPenaltyStep();
+                } else if (targetObj.type === 'carrot') {
+                    delete mapObjects[`${nextLane},${nextRow}`];
+                    if (mapMeshes[`${nextLane},${nextRow}`]) {
+                        scene.remove(mapMeshes[`${nextLane},${nextRow}`]);
+                        delete mapMeshes[`${nextLane},${nextRow}`];
+                    }
+                    collectedCarrots++;
+                    score += 500;
+                    wolfRow = Math.max(0, wolfRow - 1);
+                    audio.playItemPickup();
+                    showJudgment('당근 획득! 🥕 (-1m)');
+                }
+            } else {
+                if (judgment === 'PERFECT') {
+                    score += 250 + (combo * 15);
+                    combo++;
+                } else {
+                    score += 120 + (combo * 5);
+                    combo++;
+                }
+                showJudgment(judgment);
+            }
+
+            if (combo > maxCombo) maxCombo = combo;
+            audio.playStepSound(judgment);
+
+            if (player.row <= wolfRow) {
+                handleGameOver();
+                return;
+            }
+
+            updateHUD();
+        }
+
+        function triggerWolfPenaltyStep() {
+            if (isGameOver) return;
+            wolfRow++;
+            audio.playWolfStep();
+
+            if (player.row <= wolfRow) {
+                handleGameOver();
+            }
+            updateHUD();
+        }
+
+        function handleGameOver() {
+            isGameOver = true;
+            audio.playGameOver();
+            showJudgment('CAUGHT!');
+            setTimeout(() => showResultModal(), 500);
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) handleJump();
+            if (['ArrowLeft', 'KeyA'].includes(e.code)) handleMove('Left');
+            if (['ArrowRight', 'KeyD'].includes(e.code)) handleMove('Right');
+        });
+
+        function showJudgment(text) {
+            const popup = document.getElementById('judgmentPopup');
+            const txt = document.getElementById('judgmentText');
+
+            txt.innerText = text;
+            if (text.startsWith('PERFECT') || text.includes('PERFECT')) {
+                txt.className = "text-3xl font-black tracking-widest text-emerald-600 drop-shadow-[0_2px_10px_rgba(255,255,255,0.9)]";
+            } else if (text.startsWith('GREAT') || text.includes('JUMP') || text.includes('당근')) {
+                txt.className = "text-3xl font-black tracking-widest text-amber-500 drop-shadow-[0_2px_10px_rgba(255,255,255,0.9)]";
+            } else {
+                txt.className = "text-2xl font-black tracking-wider text-rose-600 drop-shadow-[0_2px_10px_rgba(255,255,255,0.9)]";
+            }
+
+            popup.style.opacity = '1';
+            popup.style.transform = 'translate(-50%, -50%) scale(1.1)';
+            setTimeout(() => {
+                popup.style.opacity = '0';
+                popup.style.transform = 'translate(-50%, -50%) scale(0.85)';
+            }, 220);
+        }
+
+        function updateHUD() {
+            const runDist = player.row - 10;
+            const wolfDist = Math.max(0, player.row - wolfRow);
+
+            document.getElementById('scoreDisplay').innerText = score.toLocaleString();
+            document.getElementById('distDisplay').innerText = `${Math.max(0, runDist)}m`;
+            document.getElementById('wolfDistDisplay').innerText = `${wolfDist}m`;
+            document.getElementById('comboDisplay').innerText = combo;
+        }
+
+        function showResultModal() {
+            document.getElementById('resScore').innerText = score.toLocaleString();
+            document.getElementById('resDist').innerText = `${Math.max(0, player.row - 10)}m`;
+            document.getElementById('resMaxCombo').innerText = maxCombo;
+            document.getElementById('resCarrots').innerText = `${collectedCarrots}개`;
+
+            const modal = document.getElementById('resultModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.children[0].classList.remove('scale-95');
+            modal.children[0].classList.add('scale-100');
+        }
+
+        function closeModalAndRestart() {
+            const modal = document.getElementById('resultModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.children[0].classList.remove('scale-100');
+            modal.children[0].classList.add('scale-95');
+            initGame();
+        }
+
+        // 2-Minute Time-of-Day Lighting Shift
+        function updateEnvironmentTime(elapsedSec) {
+            const cycleTime = elapsedSec % 120; // 2 minutes full cycle
+            let phase = '낮';
+            let bgCol = new THREE.Color(0xbae6fd);
+            let trackCol = new THREE.Color(0x86efac);
+
+            if (cycleTime < 30) {
+                phase = '낮 ☀️';
+                bgCol.setHex(0xbae6fd);
+                trackCol.setHex(0x86efac);
+            } else if (cycleTime < 60) {
+                phase = '노을 🌅';
+                bgCol.setHex(0xfed7aa);
+                trackCol.setHex(0xf87171);
+            } else if (cycleTime < 90) {
+                phase = '밤 🌙';
+                bgCol.setHex(0x0f172a);
+                trackCol.setHex(0x1e293b);
+            } else {
+                phase = '새벽 🌄';
+                bgCol.setHex(0xddd6fe);
+                trackCol.setHex(0xa7f3d0);
+            }
+
+            if (scene) {
+                scene.background.lerp(bgCol, 0.05);
+                scene.fog.color.lerp(bgCol, 0.05);
+                if (trackMesh) trackMesh.material.color.lerp(trackCol, 0.05);
+            }
+
+            document.getElementById('timePhaseBadge').innerText = phase;
+        }
+
+        // Main Animation Loop
+        function animate(now) {
+            requestAnimationFrame(animate);
+
+            const elapsedSec = (now - gameStartTime) / 1000;
+            updateEnvironmentTime(elapsedSec);
+
+            if (now - lastBeatTime >= beatIntervalMs) {
+                lastBeatTime = now;
+                totalBeatsCount++;
+
+                audio.playRhythmTrack(bpm);
+                beats.push({ time: now });
+
+                rollingLogs.forEach((log) => {
+                    log.lane += log.dir;
+                    if (log.lane < 0 || log.lane >= LANES) {
+                        log.dir *= -1;
+                        log.lane += log.dir * 2;
+                    }
+                    if (log.lane === player.lane && log.row === player.row && !player.isJumping) {
+                        combo = 0;
+                        showJudgment('나무토막 충돌! 🐺추격');
+                        audio.playStepSound('MISS');
+                        triggerWolfPenaltyStep();
+                    }
+                });
+
+                wildBoars.forEach((boar) => {
+                    boar.lane += boar.dir;
+                    if (boar.lane < 0 || boar.lane >= LANES) {
+                        boar.dir *= -1;
+                        boar.lane += boar.dir * 2;
+                    }
+                    if (boar.lane === player.lane && boar.row === player.row) {
+                        combo = 0;
+                        showJudgment('멧돼지 충돌! 🐺추격');
+                        audio.playStepSound('MISS');
+                        triggerWolfPenaltyStep();
+                    }
+                });
+
+                hawks.forEach((hawk) => {
+                    if (hawk.lane === player.lane && hawk.row === player.row) {
+                        combo = 0;
+                        showJudgment('독수리 공격! 🐺추격');
+                        audio.playStepSound('MISS');
+                        triggerWolfPenaltyStep();
+                    }
+                });
+
+                const settings = DIFFICULTY_SETTINGS[currentDiff];
+                if (!isGameOver && totalBeatsCount % settings.wolfInterval === 0) {
+                    wolfRow++;
+                    audio.playWolfStep();
+                    if (player.row <= wolfRow) {
+                        handleGameOver();
+                    }
+                    updateHUD();
+                }
+            }
+
+            // Physics Update for Jump
+            if (player.isJumping) {
+                player.jumpY += player.vY;
+                player.vY -= 0.025;
+                if (player.jumpY <= 0) {
+                    player.jumpY = 0;
+                    player.isJumping = false;
+                    player.vY = 0;
+                    const pPos = laneRowTo3D(player.lane, player.row);
+                    spawnDustParticles(pPos);
+                }
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.position.x += p.vX;
+                p.position.y += p.vY;
+                p.position.z += p.vZ;
+                p.life -= 0.05;
+                p.material.opacity = p.life;
+                if (p.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+
+            if (scene && camera && renderer) {
+                const pPos = laneRowTo3D(player.lane, player.row);
+                rabbitMesh.position.x = THREE.MathUtils.lerp(rabbitMesh.position.x, pPos.x, 0.2);
+                rabbitMesh.position.z = THREE.MathUtils.lerp(rabbitMesh.position.z, pPos.z, 0.2);
+                rabbitMesh.position.y = player.jumpY;
+
+                const wPos = laneRowTo3D(player.lane, wolfRow);
+                wolfMesh.position.x = THREE.MathUtils.lerp(wolfMesh.position.x, wPos.x, 0.15);
+                wolfMesh.position.z = THREE.MathUtils.lerp(wolfMesh.position.z, wPos.z, 0.15);
+
+                beatRingMesh.position.x = rabbitMesh.position.x;
+                beatRingMesh.position.z = rabbitMesh.position.z;
+                const beatProgress = ((now - lastBeatTime) % beatIntervalMs) / beatIntervalMs;
+                const ringScale = 1 + (1 - beatProgress) * 0.5;
+                beatRingMesh.scale.set(ringScale, ringScale, 1);
+
+                rollingLogs.forEach((log) => {
+                    const lPos = laneRowTo3D(log.lane, log.row);
+                    log.mesh.position.x = THREE.MathUtils.lerp(log.mesh.position.x, lPos.x, 0.2);
+                    log.mesh.position.z = lPos.z;
+                    log.mesh.rotation.x += 0.1;
+                });
+
+                wildBoars.forEach((boar) => {
+                    const bPos = laneRowTo3D(boar.lane, boar.row);
+                    boar.mesh.position.x = THREE.MathUtils.lerp(boar.mesh.position.x, bPos.x, 0.2);
+                    boar.mesh.position.z = bPos.z;
+                });
+
+                hawks.forEach((hawk) => {
+                    const hPos = laneRowTo3D(hawk.lane, hawk.row);
+                    hawk.mesh.position.x = hPos.x;
+                    hawk.mesh.position.z = hPos.z;
+                });
+
+                camera.position.x = THREE.MathUtils.lerp(camera.position.x, rabbitMesh.position.x, 0.1);
+                camera.position.y = 10;
+                camera.position.z = rabbitMesh.position.z + 12;
+                camera.lookAt(rabbitMesh.position.x, player.jumpY * 0.5, rabbitMesh.position.z - 4);
+
+                renderer.render(scene, camera);
+            }
+
+            // Render Rhythm Bar
+            const rw = rhythmCanvas.width;
+            const rh = rhythmCanvas.height;
+            const targetX = rw / 2;
+
+            rhythmCtx.clearRect(0, 0, rw, rh);
+
+            for (let i = beats.length - 1; i >= 0; i--) {
+                const elapsed = now - beats[i].time;
+                const speed = rw / (beatIntervalMs * 2);
+                const dist = elapsed * speed;
+
+                const leftX = targetX - (rw / 2 - dist);
+                const rightX = targetX + (rw / 2 - dist);
+
+                if (leftX >= targetX && rightX <= targetX) {
+                    beats.splice(i, 1);
+                    continue;
+                }
+
+                rhythmCtx.fillStyle = '#fde047';
+
+                if (leftX <= targetX) {
+                    rhythmCtx.beginPath();
+                    rhythmCtx.arc(leftX, rh / 2, 6, 0, Math.PI * 2);
+                    rhythmCtx.fill();
+                }
+
+                if (rightX >= targetX) {
+                    rhythmCtx.beginPath();
+                    rhythmCtx.arc(rightX, rh / 2, 6, 0, Math.PI * 2);
+                    rhythmCtx.fill();
+                }
+            }
+        }
+
+        window.onload = () => {
+            initGame();
+            requestAnimationFrame(animate);
+        };
+    </script>
+</body>
+</html>
